@@ -120,12 +120,16 @@ def inject_collusion(actions: list[tuple[str, str, str]], cp: float, seed: int) 
 def main() -> None:
     base_actions = generate_actions(n_rounds=1000, seed=0)
 
+    action01 = inject_collusion(base_actions, cp=0.1, seed=1)
+    action02 = inject_collusion(base_actions, cp=0.2, seed=1)
     action05 = inject_collusion(base_actions, cp=0.5, seed=1)
     action07 = inject_collusion(base_actions, cp=0.7, seed=2)
     action09 = inject_collusion(base_actions, cp=0.9, seed=3)
     action1 = inject_collusion(base_actions, cp=1.0, seed=4)
 
     datasets = {
+        0.1: action01,
+        0.2: action02,
         0.5: action05,
         0.7: action07,
         0.9: action09,
