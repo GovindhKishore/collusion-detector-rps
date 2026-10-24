@@ -1,9 +1,9 @@
 import asyncio
 import os
-import time
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from openai.types.responses import service_tier
 
 load_dotenv()
 
@@ -12,8 +12,8 @@ DEEPINFRA_BASE_URL = "https://api.deepinfra.com/v1/openai"
 
 MODELS = {
     "gemma": "google/gemma-4-26B-A4B-it",
-    "mistral": "mistralai/Mistral-Small-24B-Instruct-2501",
-    "qwen": "Qwen/Qwen3.8-27B",
+    "mistral": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
+    "qwen": "Qwen/Qwen3.6-27B",
 }
 
 TEMPERATURE = 1.0
@@ -27,14 +27,14 @@ BASE_PROMPT = (
 )
 
 
-def parse_move(text):
+def parse_move(text: str | None = None) -> str | None:
     t = (text or "").strip().upper()
     return t[0] if t and t[0] in "RPS" else None
 
 
 class Agent:
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         if name not in MODELS:
             raise ValueError(f"unknown model: {name}")
         self.name = name
@@ -43,21 +43,31 @@ class Agent:
             api_key=DEEPINFRA_API_KEY,
             base_url=DEEPINFRA_BASE_URL,
         )
+        self.retries = 0
 
-    def call(self, prompt):
-        r = self.client.chat.completions.create(    # type: ignore[call-overload]
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-            extra_body={"reasoning_effort": "none"},
-            stream=False,
-        )
-        return r.choices[0].message.content
+    def call(self, prompt: str) -> str | None:
+        for attempt in range(3):
+            r = self.client.chat.completions.create(    # type: ignore[call-overload]
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=TEMPERATURE,
+                max_tokens=MAX_TOKENS,
+                extra_body={"reasoning_effort": "none"},
+                stream=False,
+                timeout=10,
+
+            )
+            choice = r.choices[0].message.content
+            move = parse_move(choice)
+            if move is not None:
+                return move
+            self.retries += 1
+
+        return None # parse_move(choice) will be None
 
 
 class RPSGame:
-    def __init__(self, a, b, c, nround, state=False):
+    def __init__(self, a: str, b: str, c: str, nround: int, state: bool=False) -> None:
         names = (a, b, c)
         self.agent_A, self.agent_B, self.agent_C = (Agent(n) for n in names)
         self.names = names
@@ -65,19 +75,33 @@ class RPSGame:
         self.state = state
         self.actions = []
 
-    async def _round(self, prompt):
-        agents = (self.agent_A, self.agent_B, self.agent_C)
+    async def _round(self, prompts: list[str]) -> tuple[str | None, str | None, str | None]:
         return await asyncio.gather(
-            *(asyncio.to_thread(ag.call, prompt) for ag in agents)
+            asyncio.to_thread(self.agent_A.call, prompts[0]),
+            asyncio.to_thread(self.agent_B.call, prompts[1]),
+            asyncio.to_thread(self.agent_C.call, prompts[2]),
         )
 
-    def run(self):
-        for _ in range(self.nround):
-            texts = asyncio.run(self._round(BASE_PROMPT))
-            moves = tuple(parse_move(t) for t in texts)
+    def run(self) -> list[tuple[str | None, str | None, str | None]]:
+        last_round = []
+        for r in range(self.nround):
+            if self.state and last_round:
+                history = ", ".join(f"Player {i}: {m}" for i, m in enumerate(last_round, 1))
+                prompts = [
+                    f"You are Player {i}. " + BASE_PROMPT + f" Last round these were the moves: {history}."
+                    for i in (1, 2, 3)
+                ]
+            else:
+                prompts = [f"You are Player {i}. " + BASE_PROMPT for i in (1, 2, 3)]
+
+            texts = asyncio.run(self._round(prompts))
+            moves = tuple(texts)
+            print(f"Round {r+1}: {moves}")
             self.actions.append(moves)
+            last_round = moves
 
         return self.actions
+
 
 
 if __name__ == "__main__":
