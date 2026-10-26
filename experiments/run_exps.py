@@ -24,33 +24,33 @@ def main():
     # config C: gemma, mistral, qwen
     configC = RPSGame("gemma", "mistral", "qwen", nround=NROUND, state=False)
     configC_state = RPSGame("gemma", "mistral", "qwen", nround=NROUND, state=True)
-    #
-    # # RUNNING WITH NO STATE
-    # if len(results["gemma,gemma,gemma,False"]) != NROUND:
-    #     configA_results = configA.run()
-    #     print(f"Got {len(configA_results)} game rounds for config A")
-    #     results["gemma,gemma,gemma,False"] = configA_results
-    #     with open(RESULT_PATH, "w") as f:
-    #         json.dump(results, f)
-    #
-    # if len(results["gemma,gemma,mistral,False"]) != NROUND:
-    #     print("Running CONFIGB")
-    #     configB_results = configB.run()
-    #     print(f"Got {len(configB_results)} game rounds for config B")
-    #     results["gemma,gemma,mistral,False"] = configB_results
-    #     with open(RESULT_PATH, "w") as f:
-    #         json.dump(results, f)
-    #
-    # if len(results["gemma,mistral,qwen,False"]) != NROUND:
-    #     configC_results = configC.run()
-    #     print(f"Got {len(configC_results)} game rounds for config C")
-    #     results["gemma,mistral,qwen,False"] = configC_results
-    #     with open(RESULT_PATH, "w") as f:
-    #         json.dump(results, f)
-    #
-    # print(configA.agent_A.retries, configA.agent_B.retries, configA.agent_C.retries)
-    # print(configB.agent_A.retries, configB.agent_B.retries, configB.agent_C.retries)
-    # print(configC.agent_A.retries, configC.agent_B.retries, configC.agent_C.retries)
+
+    # RUNNING WITH NO STATE
+    if len(results["gemma,gemma,gemma,False"]) != NROUND:
+        configA_results = configA.run()
+        print(f"Got {len(configA_results)} game rounds for config A")
+        results["gemma,gemma,gemma,False"] = configA_results
+        with open(RESULT_PATH, "w") as f:
+            json.dump(results, f)
+
+    if len(results["gemma,gemma,mistral,False"]) != NROUND:
+        print("Running CONFIGB")
+        configB_results = configB.run()
+        print(f"Got {len(configB_results)} game rounds for config B")
+        results["gemma,gemma,mistral,False"] = configB_results
+        with open(RESULT_PATH, "w") as f:
+            json.dump(results, f)
+
+    if len(results["gemma,mistral,qwen,False"]) != NROUND:
+        configC_results = configC.run()
+        print(f"Got {len(configC_results)} game rounds for config C")
+        results["gemma,mistral,qwen,False"] = configC_results
+        with open(RESULT_PATH, "w") as f:
+            json.dump(results, f)
+
+    print(configA.agent_A.retries, configA.agent_B.retries, configA.agent_C.retries)
+    print(configB.agent_A.retries, configB.agent_B.retries, configB.agent_C.retries)
+    print(configC.agent_A.retries, configC.agent_B.retries, configC.agent_C.retries)
 
 
     # RUNNING WITH STATE
@@ -78,6 +78,17 @@ def main():
     print(configA_state.agent_A.retries, configA_state.agent_B.retries, configA_state.agent_C.retries)
     print(configB_state.agent_A.retries, configB_state.agent_B.retries, configB_state.agent_C.retries)
     print(configC_state.agent_A.retries, configC_state.agent_B.retries, configC_state.agent_C.retries)
+
+    # All the above exps are ran with reasoning_effort = None but the below one will be run with Medium effort
+    configC_big = RPSGame("gemma_big", "mistral", "qwen_big", nround=NROUND, state=True)
+
+    if len(results["gemma_big,mistral,qwen_big,True"]) != NROUND:
+        configC_big_state_results = configC_big.run()
+        print(f"Got {len(configC_big_state_results)} game rounds for config C BIG(state)")
+        results["gemma_big,mistral,qwen_big,True"] = configC_big_state_results
+        with open(RESULT_PATH, "w") as f:
+            json.dump(results, f)
+
 
 
 if __name__ == "__main__":
